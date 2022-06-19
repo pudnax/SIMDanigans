@@ -21,14 +21,14 @@ where
         let chunk = Simd::<T, LANES>::from_array(chunk);
         let needle = Simd::<T, LANES>::splat(x);
 
-        let mask = needle.lanes_eq(chunk);
-        if mask.any() {
-            for (pos, &check) in mask.to_array().iter().enumerate() {
-                if check {
-                    return Some(i * LANES + pos as usize);
-                }
+        let mask = needle.lanes_eq(chunk).to_int().cast::<u8>().to_array();
+        let (chunks, remainder) = mask.as_chunks();
+        assert!(remainder.is_empty());
+        for (j, &chunk) in chunks.iter().enumerate() {
+            let v = u128::from_le_bytes(chunk);
+            if v != 0 {
+                return Some(i * LANES + j * chunk.len() + v.trailing_zeros() as usize / 8);
             }
-            // return Some(i * LANES + mask.to_bitmask().trailing_zeros() as usize);
         }
     }
 
