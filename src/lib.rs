@@ -26,14 +26,14 @@ where
         for (j, &chunk) in chunks.iter().enumerate() {
             let bitmask = u128::from_le_bytes(chunk);
             if bitmask != 0 {
-                return Some(i * LANES + j * chunk.len() + bitmask.trailing_zeros() as usize / 8);
+                return Some((i + j) * LANES + bitmask.trailing_zeros() as usize / 8);
             }
         }
     }
 
     for (i, &elem) in remainder.iter().enumerate() {
         if elem == x {
-            return Some(i);
+            return Some(chunks.len() * LANES + i);
         }
     }
 
@@ -80,7 +80,7 @@ mod test {
 
     #[test]
     fn simd_find_4_10() {
-        let (input, middle) = prepare_input(10);
+        let (input, middle) = prepare_input(33);
         assert_eq!(
             simd_find::<_, 4>(&input, middle),
             input.iter().position(|&x| x == middle)
@@ -89,7 +89,7 @@ mod test {
 
     #[test]
     fn simd_find_16_10() {
-        let (input, middle) = prepare_input(10);
+        let (input, middle) = prepare_input(33);
         assert_eq!(
             simd_find::<_, 16>(&input, middle),
             input.iter().position(|&x| x == middle)
