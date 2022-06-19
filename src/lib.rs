@@ -11,13 +11,9 @@ pub fn simple_find(array: &[u32], x: u32) -> Option<usize> {
     })
 }
 
-pub fn simd_find<T: SimdElement + Eq + std::fmt::Debug, const LANES: usize>(
-    array: &[T],
-    x: T,
-) -> Option<usize>
+pub fn simd_find<T: SimdElement + Eq, const LANES: usize>(array: &[T], x: T) -> Option<usize>
 where
     LaneCount<LANES>: SupportedLaneCount,
-    <T as SimdElement>::Mask: std::fmt::Debug,
 {
     let (chunks, remainder) = array.as_chunks::<LANES>();
     for (i, &chunk) in chunks.iter().enumerate() {
