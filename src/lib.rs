@@ -11,22 +11,36 @@ pub fn simple_find(array: &[u32], x: u32) -> Option<usize> {
     })
 }
 
-pub fn simd_find<T: SimdElement + Eq, const LANES: usize>(array: &[T], x: T) -> Option<usize>
+pub fn simd_find<T: SimdElement + Eq + std::fmt::Debug, const LANES: usize>(
+    array: &[T],
+    x: T,
+) -> Option<usize>
 where
     LaneCount<LANES>: SupportedLaneCount,
+    <T as SimdElement>::Mask: std::fmt::Debug,
 {
     let (chunks, remainder) = array.as_chunks::<LANES>();
     for (i, &chunk) in chunks.iter().enumerate() {
         let chunk = Simd::<T, LANES>::from_array(chunk);
         let needle = Simd::<T, LANES>::splat(x);
 
-        let mask = needle.lanes_eq(chunk).to_int().cast::<u8>().to_array();
+        let mask = needle.lanes_eq(chunk).to_int();
+        let mask = mask.cast::<u8>().to_array();
         let (chunks, remainder) = mask.as_chunks();
-        assert!(remainder.is_empty());
-        for (j, &chunk) in chunks.iter().enumerate() {
-            let bitmask = u128::from_le_bytes(chunk);
+        if remainder.is_empty() {
+            for (j, &chunk) in chunks.iter().enumerate() {
+                let bitmask = u128::from_le_bytes(chunk);
+                if bitmask != 0 {
+                    return Some((i + j) * LANES + bitmask.trailing_zeros() as usize / 8);
+                }
+            }
+        } else {
+            let mut bar = [0; 16];
+            bar[..LANES].copy_from_slice(&remainder);
+
+            let bitmask = u128::from_le_bytes(bar);
             if bitmask != 0 {
-                return Some((i + j) * LANES + bitmask.trailing_zeros() as usize / 8);
+                return Some(i * LANES + bitmask.trailing_zeros() as usize / 8);
             }
         }
     }
