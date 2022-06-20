@@ -18,14 +18,10 @@ fn bench_find(c: &mut Criterion) {
             let (input, middle) = prepare_input(length);
             b.iter(|| input.iter().position(|&x| x == middle))
         });
-        group.bench_with_input(
-            BenchmarkId::new("Handwritten", length),
-            &length,
-            |b, &length| {
-                let (input, middle) = prepare_input(length);
-                b.iter(|| simple_find(&input, middle))
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("Simple", length), &length, |b, &length| {
+            let (input, middle) = prepare_input(length);
+            b.iter(|| simple_find(&input, middle))
+        });
         group.bench_with_input(BenchmarkId::new("SIMD 4", length), &length, |b, &length| {
             let (input, middle) = prepare_input(length);
             b.iter(|| simd_find::<_, 4>(&input, middle))
