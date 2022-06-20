@@ -1,5 +1,4 @@
-#![allow(incomplete_features)]
-#![feature(portable_simd, array_chunks, slice_as_chunks, generic_const_exprs)]
+#![feature(portable_simd, array_chunks, slice_as_chunks)]
 
 pub mod argmin;
 pub mod find;
