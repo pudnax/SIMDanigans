@@ -1,7 +1,8 @@
 #![allow(incomplete_features)]
 #![feature(portable_simd, array_chunks, slice_as_chunks, generic_const_exprs)]
-use std::simd::{LaneCount, Simd, SimdElement, SupportedLaneCount};
+use std::simd::{LaneCount, Simd, SimdElement, SupportedLaneCount, ToBitMask};
 
+#[inline]
 pub fn simple_find(array: &[u32], x: u32) -> Option<usize> {
     array.iter().enumerate().fold(None, |mut acc, (i, &elem)| {
         if elem == x {
@@ -11,6 +12,7 @@ pub fn simple_find(array: &[u32], x: u32) -> Option<usize> {
     })
 }
 
+#[inline]
 pub fn simd_find<T: SimdElement + Eq, const LANES: usize>(array: &[T], x: T) -> Option<usize>
 where
     LaneCount<LANES>: SupportedLaneCount,
@@ -20,8 +22,7 @@ where
         let chunk = Simd::<T, LANES>::from_array(chunk);
         let needle = Simd::<T, LANES>::splat(x);
 
-        let mask = needle.lanes_eq(chunk).to_int();
-        let mask = mask.cast::<u8>().to_array();
+        let mask = needle.lanes_eq(chunk).to_int().cast::<u8>().to_array();
         let (chunks, remainder) = mask.as_chunks();
         if remainder.is_empty() {
             for (j, &chunk) in chunks.iter().enumerate() {
@@ -38,6 +39,29 @@ where
             if bitmask != 0 {
                 return Some(i * LANES + bitmask.trailing_zeros() as usize / 8);
             }
+        }
+    }
+
+    for (i, &elem) in remainder.iter().enumerate() {
+        if elem == x {
+            return Some(chunks.len() * LANES + i);
+        }
+    }
+
+    None
+}
+
+#[inline]
+pub fn simd_find_16<T: SimdElement + Eq>(array: &[T], &x: &T) -> Option<usize> {
+    const LANES: usize = 16;
+    let (chunks, remainder) = array.as_chunks::<LANES>();
+    for (i, &chunk) in chunks.iter().enumerate() {
+        let chunk = Simd::<T, LANES>::from_array(chunk);
+        let needle = Simd::<T, LANES>::splat(x);
+
+        let mask = needle.lanes_eq(chunk);
+        if mask.any() {
+            return Some(i * LANES + mask.to_bitmask().trailing_zeros() as usize);
         }
     }
 
@@ -89,7 +113,17 @@ mod test {
     }
 
     #[test]
-    fn simd_find_4_10() {
+    fn simd_smolfind_test() {
+        let target = 1;
+
+        assert_eq!(
+            simd_find_16(&TEST_CASE, &target),
+            TEST_CASE.iter().position(|&x| x == target)
+        );
+    }
+
+    #[test]
+    fn simd_find_4_random() {
         let (input, middle) = prepare_input(33);
         assert_eq!(
             simd_find::<_, 4>(&input, middle),
@@ -98,10 +132,19 @@ mod test {
     }
 
     #[test]
-    fn simd_find_16_10() {
+    fn simd_find_16_random() {
         let (input, middle) = prepare_input(33);
         assert_eq!(
             simd_find::<_, 16>(&input, middle),
+            input.iter().position(|&x| x == middle)
+        );
+    }
+
+    #[test]
+    fn simd_smolfind_random() {
+        let (input, middle) = prepare_input(33);
+        assert_eq!(
+            simd_find_16(&input, &middle),
             input.iter().position(|&x| x == middle)
         );
     }
