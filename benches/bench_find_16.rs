@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use rand::{prelude::SliceRandom, thread_rng};
-use simdanigans::*;
+use simdanigans::find::*;
 
 fn prepare_input(length: usize) -> (Vec<u32>, u32) {
     let mut input: Vec<u32> = (0..length as u32).collect();
